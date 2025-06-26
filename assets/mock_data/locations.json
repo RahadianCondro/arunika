@@ -1,0 +1,37 @@
+[
+    {
+      "id": "loc1",
+      "name": "Malioboro Mall",
+      "address": "Jl. Malioboro No. 52-58, Yogyakarta",
+      "latitude": -7.7956,
+      "longitude": 110.3695
+    },
+    {
+      "id": "loc2",
+      "name": "Ambarrukmo Plaza",
+      "address": "Jl. Laksda Adisucipto, Yogyakarta",
+      "latitude": -7.7827,
+      "longitude": 110.4021
+    },
+    {
+      "id": "loc3",
+      "name": "UGM Campus",
+      "address": "Bulaksumur, Yogyakarta",
+      "latitude": -7.7713,
+      "longitude": 110.3774
+    },
+    {
+      "id": "loc4",
+      "name": "Keraton Yogyakarta",
+      "address": "Jl. Rotowijayan Blok No. 1, Yogyakarta",
+      "latitude": -7.8050,
+      "longitude": 110.3640
+    },
+    {
+      "id": "loc5",
+      "name": "Tugu Yogyakarta",
+      "address": "Jl. Jenderal Sudirman, Yogyakarta",
+      "latitude": -7.7830,
+      "longitude": 110.3670
+    }
+  ]

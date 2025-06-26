@@ -1,0 +1,84 @@
+
+{
+  "location": {
+    "latitude": -7.797068,
+    "longitude": 110.370529,
+    "name": "Yogyakarta"
+  },
+  "timestamp": "2025-05-01T09:30:00Z",
+  "aqi": {
+    "value": 75,
+    "category": "Moderate",
+    "color": "#FFFF00"
+  },
+  "pollutants": {
+    "PM2_5": {
+      "code": "PM2_5",
+      "name": "PM 2.5",
+      "value": 18.5,
+      "unit": "µg/m³",
+      "category": "Moderate",
+      "color": "#FFFF00"
+    },
+    "PM10": {
+      "code": "PM10",
+      "name": "PM 10",
+      "value": 42.3,
+      "unit": "µg/m³",
+      "category": "Good",
+      "color": "#00E400"
+    },
+    "O3": {
+      "code": "O3",
+      "name": "Ozone",
+      "value": 95.2,
+      "unit": "µg/m³",
+      "category": "Moderate",
+      "color": "#FFFF00"
+    },
+    "NO2": {
+      "code": "NO2",
+      "name": "Nitrogen Dioxide",
+      "value": 45.8,
+      "unit": "µg/m³",
+      "category": "Good",
+      "color": "#00E400"
+    }
+  },
+  "weather": {
+    "temperature": 29.5,
+    "humidity": 75,
+    "wind_speed": 3.2,
+    "wind_direction": "NE",
+    "conditions": "Partly Cloudy"
+  },
+  "forecast": {
+    "trend": "Improving",
+    "next_hours": [
+      {
+        "hour": "10:00",
+        "aqi": 72,
+        "primaryPollutant": "O3",
+        "trend": "down"
+      },
+      {
+        "hour": "11:00",
+        "aqi": 68,
+        "primaryPollutant": "O3",
+        "trend": "down"
+      },
+      {
+        "hour": "12:00",
+        "aqi": 65,
+        "primaryPollutant": "O3",
+        "trend": "down"
+      },
+      {
+        "hour": "13:00",
+        "aqi": 63,
+        "primaryPollutant": "O3",
+        "trend": "down"
+      }
+    ]
+  }
+}
