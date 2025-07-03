@@ -1,165 +1,145 @@
-// lib/data/repositories/air_quality_repository.dart
-import 'dart:math';
-import '../models/air_quality.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import '../../data/models/air_quality.dart';
+
+class ApiService {
+  final String baseUrl = 'http://api.airvisual.com/v2';
+  final String apiKey = '58c8d12d-5f33-43d6-80a0-a6ac89a8d2ec';
+
+  Future<Map<String, dynamic>> getCityAirQuality({
+    required String city,
+    required String state,
+    required String country,
+  }) async {
+    final uri = Uri.parse('$baseUrl/city?city=$city&state=$state&country=$country&key=$apiKey');
+    try {
+      final response = await http.get(uri).timeout(Duration(seconds: 10));
+      
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        throw Exception('Gagal mengambil data kualitas udara: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error saat mengambil data kualitas udara: $e');
+    }
+  }
+}
 
 class AirQualityRepository {
-  final Random _random = Random();
+  final ApiService _apiService = ApiService();
 
-  Future<AirQuality> getCurrentAirQuality() async {
-    // Simulate network delay
-    await Future.delayed(const Duration(milliseconds: 1000));
-    
-    // Create pollutant data
-    final Map<String, Pollutant> pollutants = {
-      'PM2_5': Pollutant(
-        code: 'PM2_5',
-        name: 'Particulate Matter < 2.5μm',
-        value: 15.0 + _random.nextDouble() * 10.0,
-        unit: 'μg/m³',
-        category: 'Sedang',
-        color: '#FFA500',
-        percentage: 0.42,
-      ),
-      'PM10': Pollutant(
-        code: 'PM10',
-        name: 'Particulate Matter < 10μm',
-        value: 30.0 + _random.nextDouble() * 15.0,
-        unit: 'μg/m³',
-        category: 'Sedang',
-        color: '#FFA500',
-        percentage: 0.35,
-      ),
-      'O3': Pollutant(
-        code: 'O3',
-        name: 'Ozone',
-        value: 40.0 + _random.nextDouble() * 20.0,
-        unit: 'ppb',
-        category: 'Baik',
-        color: '#00FF00',
-        percentage: 0.25,
-      ),
-      'NO2': Pollutant(
-        code: 'NO2',
-        name: 'Nitrogen Dioxide',
-        value: 20.0 + _random.nextDouble() * 10.0,
-        unit: 'ppb',
-        category: 'Baik',
-        color: '#00FF00',
-        percentage: 0.18,
-      ),
-    };
-    
-    // Create weather data
-    final Weather weather = Weather(
-      temperature: 28.0 + _random.nextDouble() * 4.0,
-      humidity: 65 + _random.nextInt(15),
-      windSpeed: 2.0 + _random.nextDouble() * 3.0,
-      windDirection: 'SE',
-      conditions: 'Partly Cloudy',
-    );
-    
-    // Create hourly forecast
-    final List<HourlyForecast> forecast = [];
-    final int baseAqi = 65 + _random.nextInt(10);
-    final List<String> trends = ['improving', 'stable', 'worsening'];
-    
-    for (int i = 0; i < 6; i++) {
-      final now = DateTime.now();
-      final hour = now.add(Duration(hours: i + 1));
-      final String formattedHour = '${hour.hour.toString().padLeft(2, '0')}:00';
-      
-      forecast.add(
-        HourlyForecast(
-          hour: formattedHour,
-          aqi: baseAqi + (_random.nextInt(20) - 10),
-          primaryPollutant: 'PM2_5',
-          trend: trends[_random.nextInt(trends.length)],
-        ),
+  Future<AirQuality> getCurrentAirQuality({
+    String city = 'Yogyakarta',
+    String state = 'Yogyakarta',
+    String country = 'Indonesia',
+  }) async {
+    try {
+      final json = await _apiService.getCityAirQuality(
+        city: city,
+        state: state,
+        country: country,
       );
-    }
-    
-    // Return constructed AirQuality object
-    return AirQuality(
-      aqi: baseAqi,
-      category: _getAqiCategory(baseAqi),
-      pollutants: pollutants,
-      weather: weather,
-      hourlyForecast: forecast,
-    );
-  }
-  
-  // Helper to get category based on AQI
-  String _getAqiCategory(int aqi) {
-    if (aqi <= 50) {
-      return 'Baik';
-    } else if (aqi <= 100) {
-      return 'Sedang';
-    } else if (aqi <= 150) {
-      return 'Tidak Sehat untuk Kelompok Sensitif';
-    } else if (aqi <= 200) {
-      return 'Tidak Sehat';
-    } else if (aqi <= 300) {
-      return 'Sangat Tidak Sehat';
-    } else {
-      return 'Berbahaya';
-    }
-  }
-  
-  // Get air quality forecast for specific locations
-  Future<Map<String, AirQuality>> getAirQualityForLocations(List<dynamic> locations) async {
-    // Simulate network delay
-    await Future.delayed(const Duration(milliseconds: 1500));
-    
-    final Map<String, AirQuality> results = {};
-    
-    // Generate air quality data for each location
-    for (final location in locations) {
-      final String locationName = location['name'] as String;
       
-      // Use the location's coordinates to seed the random generator
-      // for consistent but varied results
-      final double lat = location['lat'] as double;
-      final double lon = location['lon'] as double;
-      final int seed = ((lat * 100).round() + (lon * 100).round()) % 100000;
-      final Random locationRandom = Random(seed);
-      
-      final int locationAqi = 40 + locationRandom.nextInt(60);
-      
-      // Create consistent but varied air quality data for this location
-      results[locationName] = AirQuality(
-        aqi: locationAqi,
-        category: _getAqiCategory(locationAqi),
+      if (json['status'] != 'success' || json['data'] == null) {
+        throw Exception('Respons API tidak valid');
+      }
+
+      final data = json['data'];
+      final pollution = data['current']['pollution'];
+      final weather = data['current']['weather'];
+
+      // Memetakan respons API ke model AirQuality
+      return AirQuality(
+        aqi: pollution['aqius'] ?? 0,
+        category: _mapAqiCategory(pollution['aqius'] ?? 0),
         pollutants: {
           'PM2_5': Pollutant(
             code: 'PM2_5',
-            name: 'Particulate Matter < 2.5μm',
-            value: 10.0 + locationRandom.nextDouble() * 20.0,
-            unit: 'μg/m³',
-            category: 'Sedang',
-            color: '#FFA500',
-            percentage: 0.3 + locationRandom.nextDouble() * 0.3,
+            name: 'PM 2.5',
+            value: pollution['aqius'].toDouble(), // Catatan: API mungkin tidak menyediakan nilai polutan spesifik
+            unit: 'µg/m³',
+            category: _mapAqiCategory(pollution['aqius'] ?? 0),
+            color: _mapAqiColor(pollution['aqius'] ?? 0),
+            percentage: _calculatePercentage('PM2_5', pollution['aqius'] ?? 0),
           ),
-          'PM10': Pollutant(
-            code: 'PM10',
-            name: 'Particulate Matter < 10μm',
-            value: 20.0 + locationRandom.nextDouble() * 30.0,
-            unit: 'μg/m³',
-            category: 'Sedang',
-            color: '#FFA500',
-            percentage: 0.2 + locationRandom.nextDouble() * 0.4,
-          ),
+          // Tambahkan polutan lain jika API menyediakan datanya
         },
         weather: Weather(
-          temperature: 27.0 + locationRandom.nextDouble() * 5.0,
-          humidity: 60 + locationRandom.nextInt(20),
-          windSpeed: 1.5 + locationRandom.nextDouble() * 4.0,
-          windDirection: 'SE',
-          conditions: 'Sunny',
+          temperature: (weather['tp'] ?? 0).toDouble(),
+          humidity: weather['hu'] ?? 0,
+          windSpeed: (weather['ws'] ?? 0).toDouble(),
+          windDirection: _mapWindDirection(weather['wd'] ?? 0),
+          conditions: _mapWeatherCondition(weather['ic'] ?? '01d'),
         ),
-        hourlyForecast: [],  // No hourly forecast for location-specific data
+        hourlyForecast: [], // Catatan: API mungkin tidak menyediakan prakiraan; sesuaikan jika tersedia
       );
+    } catch (e) {
+      throw Exception('Gagal memuat data kualitas udara: $e');
     }
-    
-    return results;
+  }
+
+  String _mapAqiCategory(int aqi) {
+    if (aqi <= 50) return 'Baik';
+    if (aqi <= 100) return 'Sedang';
+    if (aqi <= 150) return 'Tidak Sehat untuk Kelompok Sensitif';
+    if (aqi <= 200) return 'Tidak Sehat';
+    if (aqi <= 300) return 'Sangat Tidak Sehat';
+    return 'Berbahaya';
+  }
+
+  String _mapAqiColor(int aqi) {
+    if (aqi <= 50) return '#00E400'; // Hijau
+    if (aqi <= 100) return '#FFFF00'; // Kuning
+    if (aqi <= 150) return '#FF7E00'; // Oranye
+    if (aqi <= 200) return '#FF0000'; // Merah
+    if (aqi <= 300) return '#8F3F97'; // Ungu
+    return '#7E0023'; // Maroon
+  }
+
+  String _mapWindDirection(int degrees) {
+    if (degrees >= 337.5 || degrees < 22.5) return 'U';
+    if (degrees < 67.5) return 'TL';
+    if (degrees < 112.5) return 'T';
+    if (degrees < 157.5) return 'TG';
+    if (degrees < 202.5) return 'S';
+    if (degrees < 247.5) return 'BD';
+    if (degrees < 292.5) return 'B';
+    return 'BL';
+  }
+
+  String _mapWeatherCondition(String iconCode) {
+    switch (iconCode) {
+      case '01d':
+      case '01n':
+        return 'Cerah';
+      case '02d':
+      case '02n':
+        return 'Sedikit Berawan';
+      case '03d':
+      case '03n':
+        return 'Berawan Sebagian';
+      case '04d':
+      case '04n':
+        return 'Berawan';
+      default:
+        return 'Tidak Diketahui';
+    }
+  }
+
+  double _calculatePercentage(String pollutantType, dynamic value) {
+    double numValue = value is double ? value : (value is int ? value.toDouble() : 0.0);
+    switch (pollutantType) {
+      case 'PM2_5':
+        return (numValue / 35.0).clamp(0.0, 1.0); // 35 µg/m³ dianggap tidak sehat
+      case 'PM10':
+        return (numValue / 150.0).clamp(0.0, 1.0); // 150 µg/m³ dianggap tidak sehat
+      case 'O3':
+        return (numValue / 150.0).clamp(0.0, 1.0); // 150 µg/m³ dianggap tidak sehat
+      case 'NO2':
+        return (numValue / 200.0).clamp(0.0, 1.0); // 200 µg/m³ dianggap tidak sehat
+      default:
+        return (numValue / 100.0).clamp(0.0, 1.0); // Default
+    }
   }
 }
