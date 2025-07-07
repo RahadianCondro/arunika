@@ -9,6 +9,8 @@ import 'data/models/recommendation.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/register_screen.dart';
 import 'features/auth/health_profile_screen.dart';
+import 'features/auth/verify_email_screen.dart';
+
 import 'features/onboarding/splash_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
 import 'features/dashboard/dashboard_screen.dart';
@@ -26,6 +28,7 @@ import 'features/dashboard/recommendation_detail_screen.dart';
 import 'features/settings/settings_screen.dart';
 import 'features/settings/enhanced_settings_screen.dart'; // Add the import for the enhanced settings
 import 'core/utils/page_transitions.dart';
+
 
 class AppRoutes {
   static const String splash = '/';
@@ -47,6 +50,8 @@ class AppRoutes {
   static const String enhancedSettings = '/enhanced-settings'; // Add the new route constant
   static const String favoriteLocations = '/favorite-locations';
   static const String routeResults = '/route-results';
+  static const String verifyEmail = '/verify-email';
+
 
   static Map<String, WidgetBuilder> getRoutes() {
     return {
@@ -67,6 +72,8 @@ class AppRoutes {
       settings: (context) => const SettingsScreen(),
       enhancedSettings: (context) => const EnhancedSettingsScreen(), // Add the route builder
       favoriteLocations: (context) => const FavoriteLocationsScreen(),
+      verifyEmail: (context) => const VerifyEmailScreen(),
+
     };
   }
   

@@ -4,7 +4,7 @@ import '../constants/app_dimensions.dart';
 
 class PrimaryButton extends StatelessWidget {
   final String text;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed; // ✅ sudah nullable
   final bool isLoading;
   final bool isFullWidth;
   final EdgeInsets padding;
@@ -31,7 +31,7 @@ class PrimaryButton extends StatelessWidget {
           padding: padding,
         ),
         child: isLoading
-            ? SizedBox(
+            ? const SizedBox(
                 height: 20,
                 width: 20,
                 child: CircularProgressIndicator(
