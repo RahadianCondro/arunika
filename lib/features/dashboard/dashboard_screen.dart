@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
-import '../../routes.dart'; // Added missing import
+import '../../routes.dart';
 import '../../core/widgets/aqi_indicator.dart';
 import '../../core/widgets/forecast_card.dart';
 import '../../core/widgets/weather_card.dart';
@@ -21,6 +21,9 @@ import 'recommendation_detail_screen.dart';
 import '../health/recommendations_screen.dart';
 import '../../core/widgets/app_bottom_navigation_bar.dart';
 
+import 'dart:async';                
+import 'package:intl/intl.dart';    
+
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({Key? key}) : super(key: key);
 
@@ -31,12 +34,54 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   final AirQualityRepository _airQualityRepository = AirQualityRepository();
   final RecommendationRepository _recommendationRepository = RecommendationRepository();
-  
+  DateTime _now = DateTime.now();
+  Timer? _clockTimer;
+
   late Future<AirQuality> _airQualityFuture;
   late Future<List<Recommendation>> _recommendationsFuture;
   
   int _selectedTab = 0;
   final PageController _pageController = PageController();
+
+  // Dummy forecast data similar to ForecastScreen
+  final List<Map<String, dynamic>> _hourlyForecast = [
+    {
+      'hour': 'Now',
+      'aqi': 75,
+      'trend': 'stable',
+      'primary': 'PM2.5',
+    },
+    {
+      'hour': '11:00',
+      'aqi': 72,
+      'trend': 'improving',
+      'primary': 'PM2.5',
+    },
+    {
+      'hour': '12:00',
+      'aqi': 68,
+      'trend': 'improving',
+      'primary': 'O3',
+    },
+    {
+      'hour': '13:00',
+      'aqi': 65,
+      'trend': 'improving',
+      'primary': 'O3',
+    },
+    {
+      'hour': '14:00',
+      'aqi': 60,
+      'trend': 'improving',
+      'primary': 'O3',
+    },
+    {
+      'hour': '15:00',
+      'aqi': 58,
+      'trend': 'improving',
+      'primary': 'PM2.5',
+    },
+  ];
   
 @override
 void initState() {
@@ -45,20 +90,24 @@ void initState() {
   _airQualityFuture = _airQualityRepository.getCurrentAirQuality();
   _recommendationsFuture = _recommendationRepository.getRecommendations();
   
+// ⏰ update jam tiap menit
+  _clockTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+    setState(() => _now = DateTime.now());
+  });
+
   // Add error handling
   _airQualityFuture.catchError((error) {
     print('Error loading air quality data: $error');
-    // You could show a snackbar or other error notification here
   });
   
   _recommendationsFuture.catchError((error) {
     print('Error loading recommendations: $error');
-    // You could show a snackbar or other error notification here
   });
 }
   
   @override
   void dispose() {
+    _clockTimer?.cancel();
     _pageController.dispose();
     super.dispose();
   }
@@ -73,35 +122,148 @@ void initState() {
       curve: Curves.easeInOut,
     );
   }
-  
-  // Moved the methods inside the class
+
   Widget _buildPollutantRow(String name, dynamic value, String unit) {
-  String displayValue;
-  if (value is double) {
-    displayValue = value.toStringAsFixed(1); // Show only 1 decimal place
-  } else {
-    displayValue = value.toString();
+    String displayValue;
+    if (value is double) {
+      displayValue = value.toStringAsFixed(1);
+    } else {
+      displayValue = value.toString();
+    }
+    
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          '$name: ',
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF505050),
+          ),
+        ),
+        Text(
+          '$displayValue $unit',
+          style: const TextStyle(
+            fontSize: 16,
+            color: Color(0xFF606060),
+          ),
+        ),
+      ],
+    );
   }
+
+  Color _getAqiColor(int aqi) {
+    if (aqi <= 50) return AppColors.aqiGood;
+    if (aqi <= 100) return AppColors.aqiModerate;
+    if (aqi <= 150) return AppColors.aqiUnhealthySensitive;
+    if (aqi <= 200) return AppColors.aqiUnhealthy;
+    if (aqi <= 300) return AppColors.aqiVeryUnhealthy;
+    return AppColors.aqiHazardous;
+  }
+
+  String _getAqiCategory(int aqi) {
+    if (aqi <= 50) return 'GOOD';
+    if (aqi <= 100) return 'MODERATE';
+    if (aqi <= 150) return 'UNHEALTHY FOR SENSITIVE';
+    if (aqi <= 200) return 'UNHEALTHY';
+    if (aqi <= 300) return 'VERY UNHEALTHY';
+    return 'HAZARDOUS';
+  }
+
+  IconData _getTrendIcon(String trend) {
+    switch (trend) {
+      case 'improving':
+        return Icons.trending_down;
+      case 'worsening':
+        return Icons.trending_up;
+      default:
+        return Icons.trending_flat;
+    }
+  }
+
+  Color _getTrendColor(String trend) {
+    switch (trend) {
+      case 'improving':
+        return AppColors.success;
+      case 'worsening':
+        return AppColors.danger;
+      default:
+        return AppColors.warning;
+    }
+  }
+
+Widget _buildForecastCard(Map<String, dynamic> forecast) {
+  final hour = forecast['hour'];
+  final aqi = forecast['aqi'];
+  final trend = forecast['trend'];
+  final primary = forecast['primary'];
   
-  return Row(
-    mainAxisAlignment: MainAxisAlignment.center,
-    children: [
-      Text(
-        '$name: ',
-        style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-          color: Color(0xFF505050),
+  final aqiColor = _getAqiColor(aqi);
+  final trendColor = _getTrendColor(trend);
+  final trendIcon = _getTrendIcon(trend);
+  
+  return Container(
+    width: 100,
+    margin: const EdgeInsets.symmetric(horizontal: 6),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.05),
+          blurRadius: 8,
+          spreadRadius: 0,
+          offset: const Offset(0, 2),
         ),
+      ],
+    ),
+    child: Padding(
+      padding: const EdgeInsets.all(10), // Kurangi padding dari 12 ke 10
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly, // Ubah ke spaceEvenly
+        children: [
+          Text(
+            hour,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF505050),
+            ),
+          ),
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: aqiColor.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                aqi.toString(),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: aqiColor,
+                ),
+              ),
+            ),
+          ),
+          Text(
+            primary,
+            style: const TextStyle(
+              fontSize: 10,
+              color: Color(0xFF757575),
+            ),
+          ),
+          Icon(
+            trendIcon,
+            size: 16,
+            color: trendColor,
+          ),
+        ],
       ),
-      Text(
-        '$displayValue $unit',
-        style: const TextStyle(
-          fontSize: 16,
-          color: Color(0xFF606060),
-        ),
-      ),
-    ],
+    ),
   );
 }
 
@@ -206,17 +368,17 @@ void initState() {
                           
                           // Forecast cards skeleton
                           SizedBox(
-                            height: 110,
+                            height: 120,
                             child: ListView.builder(
                               scrollDirection: Axis.horizontal,
                               itemCount: 5,
                               itemBuilder: (context, index) {
                                 return Container(
-                                  width: 80,
-                                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                                  width: 100,
+                                  margin: const EdgeInsets.symmetric(horizontal: 6),
                                   decoration: BoxDecoration(
                                     color: Colors.white,
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(16),
                                     boxShadow: [
                                       BoxShadow(
                                         color: Colors.black.withOpacity(0.05),
@@ -227,15 +389,17 @@ void initState() {
                                     ],
                                   ),
                                   child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
+                                    padding: const EdgeInsets.all(12),
                                     child: Column(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
-                                        SkeletonLoading(height: 14, width: 40, borderRadius: 4),
+                                        SkeletonLoading(height: 12, width: 40, borderRadius: 4),
                                         const SizedBox(height: 8),
-                                        SkeletonLoading(height: 24, width: 40, borderRadius: 4),
-                                        const SizedBox(height: 8),
-                                        SkeletonLoading(height: 18, width: 18, borderRadius: 4),
+                                        SkeletonLoading(height: 40, width: 40, borderRadius: 20),
+                                        const SizedBox(height: 6),
+                                        SkeletonLoading(height: 10, width: 30, borderRadius: 4),
+                                        const SizedBox(height: 4),
+                                        SkeletonLoading(height: 16, width: 16, borderRadius: 4),
                                       ],
                                     ),
                                   ),
@@ -367,7 +531,7 @@ void initState() {
                                   const SizedBox(width: 4),
                                   Expanded(
                                     child: Text(
-                                      'Malioboro, Yogyakarta',
+                                      'Yogyakarta',
                                       style: const TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.w600,
@@ -380,12 +544,9 @@ void initState() {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'May 1, 2025 | 09:30 AM',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: Color(0xFF757575),
-                                ),
-                              ),
+                              DateFormat('MMM d, yyyy | hh:mm a').format(_now),
+                              style: const TextStyle(fontSize: 14, color: Color(0xFF757575)),
+                            ),
                             ],
                           ),
                         ).animate().fade().slideY(begin: 0.3, end: 0),
@@ -509,20 +670,15 @@ void initState() {
                         
                         const SizedBox(height: 12),
                         
-                        // Forecast cards
+                        // Forecast cards with real data
                         SizedBox(
-                          height: 110,
+                          height: 120,
                           child: ListView.builder(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
                             scrollDirection: Axis.horizontal,
-                            itemCount: airQuality.hourlyForecast.length,
+                            itemCount: _hourlyForecast.length,
                             itemBuilder: (context, index) {
-                              final forecast = airQuality.hourlyForecast[index];
-                              return ForecastCard(
-                                time: forecast.hour,
-                                aqi: forecast.aqi,
-                                trend: forecast.trend,
-                              );
+                              return _buildForecastCard(_hourlyForecast[index]);
                             },
                           ),
                         ).animate(delay: 200.ms).fade().slideY(begin: 0.3, end: 0),

@@ -6,6 +6,7 @@ class ApiService {
   final String baseUrl = 'http://api.airvisual.com/v2';
   final String apiKey = '58c8d12d-5f33-43d6-80a0-a6ac89a8d2ec';
 
+
   Future<Map<String, dynamic>> getCityAirQuality({
     required String city,
     required String state,
