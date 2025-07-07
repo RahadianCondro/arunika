@@ -114,7 +114,7 @@ class _HealthProfileScreenState extends State<HealthProfileScreen> {
       setState(() {
         _isLoading = false;
       });
-      AppRoutes.navigateTo(context, AppRoutes.healthDashboard, replace: true);
+      AppRoutes.navigateTo(context, AppRoutes.dashboard, replace: true);
     }
   }
 
