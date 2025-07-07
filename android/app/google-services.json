@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "231566288621",
+    "project_id": "arunika-ba5d4",
+    "storage_bucket": "arunika-ba5d4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:231566288621:android:bae6ed7dd67fd2f4b70ee4",
+        "android_client_info": {
+          "package_name": "com.example.arunika"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC1p2r9pUGp79vB-Wa2070DmjDiqtIjSZU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

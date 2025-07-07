@@ -1,6 +1,7 @@
-// lib/features/auth/register_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:arunika/data/repositories/auth_repository.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../core/constants/app_strings.dart';
@@ -21,10 +22,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _acceptTerms = false;
   bool _isLoading = false;
+
+  final _authRepo = AuthRepository();
 
   @override
   void dispose() {
@@ -35,198 +39,151 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  void _register() {
-    if (_formKey.currentState!.validate() && _acceptTerms) {
-      setState(() {
-        _isLoading = true;
-      });
+  Future<void> _register() async {
+    if (!_formKey.currentState!.validate()) return;
 
-      // Simulate network delay
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-          // Navigate to health profile setup on successful registration
-          AppRoutes.navigateTo(context, AppRoutes.healthProfile, replace: true);
-        }
-      });
-    } else if (!_acceptTerms) {
+    if (!_acceptTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please accept the terms and conditions'),
           backgroundColor: AppColors.danger,
         ),
       );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      await _authRepo.signUp(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+
+      await _authRepo.sendEmailVerification();
+
+      if (!mounted) return;
+      AppRoutes.navigateTo(context, AppRoutes.verifyEmail, replace: true);
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message ?? 'Gagal mendaftar'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(AppStrings.register),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            AppRoutes.navigateTo(context, AppRoutes.login, replace: true);
-          },
-        ),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: EdgeInsets.all(AppDimensions.spacing6),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      appBar: AppBar(title: Text(AppStrings.register)),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.all(AppDimensions.spacing6),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              // Full Name
+              AppTextField(
+                label: 'Full Name',
+                controller: _nameController,
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'Enter your name' : null,
+              ).animate().fade().slideY(begin: 0.5),
+
+              const SizedBox(height: 16),
+
+              // Email
+              AppTextField(
+                label: AppStrings.email,
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Enter your email';
+                  }
+                  final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                  if (!emailRegex.hasMatch(value)) {
+                    return 'Email tidak valid';
+                  }
+                  return null;
+                },
+              ).animate(delay: 100.ms).fade().slideY(begin: 0.5),
+
+              const SizedBox(height: 16),
+
+              // Password
+              AppTextField(
+                label: AppStrings.password,
+                controller: _passwordController,
+                obscureText: _obscurePassword,
+                validator: (value) =>
+                    value == null || value.length < 6 ? 'Minimal 6 karakter' : null,
+                suffixIcon: IconButton(
+                  icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
+                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                ),
+              ).animate(delay: 200.ms).fade().slideY(begin: 0.5),
+
+              const SizedBox(height: 16),
+
+              // Confirm Password
+              AppTextField(
+                label: AppStrings.confirmPassword,
+                controller: _confirmPasswordController,
+                obscureText: _obscureConfirmPassword,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Konfirmasi password tidak boleh kosong';
+                  }
+                  if (value != _passwordController.text) {
+                    return 'Password tidak cocok';
+                  }
+                  return null;
+                },
+                suffixIcon: IconButton(
+                  icon: Icon(_obscureConfirmPassword
+                      ? Icons.visibility
+                      : Icons.visibility_off),
+                  onPressed: () =>
+                      setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                ),
+              ).animate(delay: 300.ms).fade().slideY(begin: 0.5),
+
+              const SizedBox(height: 16),
+
+              // Terms & Conditions
+              Row(
                 children: [
-                  // Full Name field
-                  AppTextField(
-                    label: 'Full Name',
-                    hint: 'Your name',
-                    controller: _nameController,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your name';
-                      }
-                      return null;
-                    },
-                  ).animate().fade().slideY(begin: 0.5, end: 0),
-                  
-                  SizedBox(height: AppDimensions.spacing4),
-                  
-                  // Email field
-                  AppTextField(
-                    label: AppStrings.email,
-                    hint: 'your.email@example.com',
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your email';
-                      }
-                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                        return 'Please enter a valid email address';
-                      }
-                      return null;
-                    },
-                  ).animate(delay: 100.ms).fade().slideY(begin: 0.5, end: 0),
-                  
-                  SizedBox(height: AppDimensions.spacing4),
-                  
-                  // Password field
-                  AppTextField(
-                    label: AppStrings.password,
-                    controller: _passwordController,
-                    obscureText: _obscurePassword,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter your password';
-                      }
-                      if (value.length < 6) {
-                        return 'Password must be at least 6 characters';
-                      }
-                      return null;
-                    },
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword ? Icons.visibility : Icons.visibility_off,
-                        color: AppColors.gray60,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
-                    ),
-                  ).animate(delay: 200.ms).fade().slideY(begin: 0.5, end: 0),
-                  
-                  SizedBox(height: AppDimensions.spacing4),
-                  
-                  // Confirm Password field
-                  AppTextField(
-                    label: AppStrings.confirmPassword,
-                    controller: _confirmPasswordController,
-                    obscureText: _obscureConfirmPassword,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please confirm your password';
-                      }
-                      if (value != _passwordController.text) {
-                        return 'Passwords do not match';
-                      }
-                      return null;
-                    },
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
-                        color: AppColors.gray60,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _obscureConfirmPassword = !_obscureConfirmPassword;
-                        });
-                      },
-                    ),
-                  ).animate(delay: 300.ms).fade().slideY(begin: 0.5, end: 0),
-                  
-                  SizedBox(height: AppDimensions.spacing4),
-                  
-                  // Terms and conditions
-                  Row(
-                    children: [
-                      Checkbox(
-                        value: _acceptTerms,
-                        onChanged: (value) {
-                          setState(() {
-                            _acceptTerms = value ?? false;
-                          });
-                        },
-                        activeColor: AppColors.primary,
-                      ),
-                      Expanded(
-                        child: Text(
-                          AppStrings.termsAndConditions,
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      ),
-                    ],
-                  ).animate(delay: 400.ms).fade().slideY(begin: 0.5, end: 0),
-                  
-                  SizedBox(height: AppDimensions.spacing8),
-                  
-                  // Register button
-                  PrimaryButton(
-                    text: AppStrings.register,
-                    onPressed: _register,
-                    isLoading: _isLoading,
-                  ).animate(delay: 500.ms).fade().slideY(begin: 0.5, end: 0),
-                  
-                  SizedBox(height: AppDimensions.spacing6),
-                  
-                  // Login option
-                  Center(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          AppStrings.alreadyHaveAccount,
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            AppRoutes.navigateTo(context, AppRoutes.login, replace: true);
-                          },
-                          child: Text(AppStrings.login),
-                        ),
-                      ],
-                    ),
-                  ).animate(delay: 600.ms).fade(),
+                  Checkbox(
+                    value: _acceptTerms,
+                    onChanged: (v) => setState(() => _acceptTerms = v ?? false),
+                  ),
+                  const Expanded(child: Text('Saya menyetujui syarat & ketentuan')),
                 ],
               ),
-            ),
+
+              const SizedBox(height: 24),
+
+              // Button
+              PrimaryButton(
+                text: AppStrings.register,
+                onPressed: _register,
+                isLoading: _isLoading,
+              ).animate(delay: 400.ms).fade().slideY(begin: 0.5),
+
+              const SizedBox(height: 16),
+
+              TextButton(
+                onPressed: () =>
+                    AppRoutes.navigateTo(context, AppRoutes.login),
+                child: Text(AppStrings.alreadyHaveAccount),
+              ),
+            ],
           ),
         ),
       ),

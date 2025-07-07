@@ -1,4 +1,5 @@
 // lib/data/models/health_profile.dart
+
 class HealthProfile {
   final String id;
   final String name;
@@ -16,17 +17,25 @@ class HealthProfile {
     required this.pollutantSensitivity,
   });
 
-  factory HealthProfile.empty() {
+  // ✅ Constructor fleksibel yang bisa dikustomisasi saat dipanggil
+  factory HealthProfile.empty({
+    String uid = '',
+    String name = 'Pengguna',
+    int age = 30,
+    List<String> healthConditions = const [],
+    String activityLevel = 'Sedang',
+    Map<String, double> pollutantSensitivity = const {
+      'PM2_5': 3.0,
+      'O3': 2.0,
+    },
+  }) {
     return HealthProfile(
-      id: '',
-      name: 'Pengguna',
-      age: 30,
-      healthConditions: [],
-      activityLevel: 'Sedang',
-      pollutantSensitivity: {
-        'PM2_5': 3.0,
-        'O3': 2.0,
-      },
+      id: uid,
+      name: name,
+      age: age,
+      healthConditions: healthConditions,
+      activityLevel: activityLevel,
+      pollutantSensitivity: pollutantSensitivity,
     );
   }
 
